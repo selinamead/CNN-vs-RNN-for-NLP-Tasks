@@ -23,7 +23,7 @@ from tensorflow.keras.models import Sequential
 # from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Embedding
 from tensorflow.python.keras.layers import Input, Dense, Dropout, Flatten, Conv1D, GlobalMaxPooling1D
-
+import matplotlib.pyplot as plt
 
 class Sentiment_Analysis:
 
@@ -33,7 +33,7 @@ class Sentiment_Analysis:
 		self.file_path = file_path 
 		print('Retrieving IMBD Dataset')
 		self.dataset = pd.read_csv(file_path)
-		self.small_dataset = self.dataset[:10000]
+		self.small_dataset = self.dataset[:50000]
 
 
 	def pre_process(self, file):
@@ -58,7 +58,7 @@ class Sentiment_Analysis:
 		# Clean textual data from 'Review'
 		stemmer = SnowballStemmer('english') 
 		# Function to clean up requirements
-		# https://stackoverflow.com/questions/54396405/how-can-i-preprocess-nlp-text-lowercase-remove-special-characters-remove-numb
+		'''
 		def preprocess(sentence):
 			sentence = str(sentence)
 			sentence = sentence.lower()
@@ -71,15 +71,36 @@ class Sentiment_Analysis:
 			stem_words = [stemmer.stem(w) for w in filtered_words]
 			
 			return " ".join(filtered_words)
+		'''
+		# This function is significantly more efficient than above
+		def preprocess_text(sent):
+			# Removing html tags
+		    sentence = remove_tags(sent)
+		    # Remove punctuations and numbers
+		    sentence = re.sub('[^a-zA-Z]', ' ', sentence)
+		    # Single character removal
+		    sentence = re.sub(r"\s+[a-zA-Z]\s+", ' ', sentence)
+		    # Removing multiple spaces
+		    sentence = re.sub(r'\s+', ' ', sentence)
+		    return sentence
 
-		movie_reviews['Review'] = movie_reviews['review'].map(lambda s:preprocess(s))
-		# print(movie_reviews.Review[7])
+		TAG_RE = re.compile(r'<[^>]+>')
+		def remove_tags(text):
+			return TAG_RE.sub('', text)
 
-		# Store cleaned reviews into a list to use for train/test
 		X = []
-		reviews = list(movie_reviews.Review)
-		for review in reviews:
-			X.append(review)
+		sentences = list(movie_reviews['review'])
+		for sent in sentences:
+			X.append(preprocess_text(sent))
+
+		# movie_reviews['Review'] = movie_reviews['review'].map(lambda s:preprocess(s))
+		# # print(movie_reviews.Review[7])
+
+		# # Store cleaned reviews into a list to use for train/test
+		# X = []
+		# reviews = list(movie_reviews.Review)
+		# for review in reviews:
+		# 	X.append(review)
 
 		# Convert y(sentiment) column to numerical
 		y = []
@@ -143,10 +164,29 @@ class Sentiment_Analysis:
 		print(model.summary())	
 
 		# Train the model
-		model.fit(X_train, y_train, epochs=100, batch_size=50, verbose=1)
+		history = model.fit(X_train, y_train, epochs=6, batch_size=128, verbose=1, validation_split=0.2)
 		# Evaluate the model
 		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
 		print('Accuracy: %f' % (accuracy*100))
+
+
+		plt.plot(history.history['acc'])
+		plt.plot(history.history['val_acc'])
+
+		plt.title('model accuracy')
+		plt.ylabel('accuracy')
+		plt.xlabel('epoch')
+		plt.legend(['train','test'], loc = 'upper left')
+		plt.show()
+
+		plt.plot(history.history['loss'])
+		plt.plot(history.history['val_loss'])
+
+		plt.title('model loss')
+		plt.ylabel('loss')
+		plt.xlabel('epoch')
+		plt.legend(['train','test'], loc = 'upper left')
+		plt.show()
 	
 	# def RNN():
 
@@ -157,11 +197,11 @@ class Sentiment_Analysis:
 
 if __name__ == "__main__":
 
-    # main() 
     file = '/Users/selina/Code/Python/SSL/CNN_vs_RNN/IMDB_Dataset.csv'
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
     extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
-    # print(extractor)
+    # extractor.RNN(X_train, y_train, X_test, y_test, vocab_size)
+    
 
 
