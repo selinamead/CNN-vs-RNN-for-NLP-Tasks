@@ -24,6 +24,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding
 from tensorflow.python.keras.layers import Input, Dense, Dropout, Flatten, Conv1D, GlobalMaxPooling1D
 import matplotlib.pyplot as plt
+# IMport RNN Libraries
+from tensorflow.python.keras.layers import LSTM
 
 class Sentiment_Analysis:
 
@@ -169,7 +171,6 @@ class Sentiment_Analysis:
 		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
 		print('Accuracy: %f' % (accuracy*100))
 
-
 		plt.plot(history.history['acc'])
 		plt.plot(history.history['val_acc'])
 
@@ -188,8 +189,51 @@ class Sentiment_Analysis:
 		plt.legend(['train','test'], loc = 'upper left')
 		plt.show()
 	
-	# def RNN():
+	def RNN(self, X_train, y_train, X_test, y_test, vocab_size):
+		print('Recurrent Neural Network')
+		
+		X_train = X_train
+		X_test = X_test
+		y_train = y_train
+		y_test = y_test
 
+		# Max length of review for embedding
+		max_length = 100 
+		embedding_dim = 10
+
+		model = Sequential()
+		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+		model.add(LSTM(128))
+		model.add(Dense(1, activation='sigmoid'))
+		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+
+		print(model.summary())	
+
+		# Train the model
+		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
+		# Evaluate the model
+		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+		print('Accuracy: %f' % (accuracy*100))
+
+		plt.plot(history.history['acc'])
+		plt.plot(history.history['val_acc'])
+
+		plt.title('model accuracy')
+		plt.ylabel('accuracy')
+		plt.xlabel('epoch')
+		plt.legend(['train','test'], loc = 'upper left')
+		plt.show()
+
+		plt.plot(history.history['loss'])
+		plt.plot(history.history['val_loss'])
+
+		plt.title('model loss')
+		plt.ylabel('loss')
+		plt.xlabel('epoch')
+		plt.legend(['train','test'], loc = 'upper left')
+		plt.show()
+
+	
 	# def LSTM():
 
 	# CNN()
@@ -200,8 +244,8 @@ if __name__ == "__main__":
     file = '/Users/selina/Code/Python/SSL/CNN_vs_RNN/IMDB_Dataset.csv'
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
-    extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
-    # extractor.RNN(X_train, y_train, X_test, y_test, vocab_size)
+    # extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.RNN(X_train, y_train, X_test, y_test, vocab_size)
     
 
 
