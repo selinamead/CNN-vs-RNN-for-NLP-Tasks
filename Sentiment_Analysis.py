@@ -1,6 +1,5 @@
-''' Sentiment Analysis of Movie Reviews using CNN, RNN and LSTM architecture '''
+''' Sentiment Analysis of Movie Reviews using CNN and RNN architectures '''
 
-import warnings
 # Import Pre-Processing libraries
 import csv
 import numpy as np
@@ -19,25 +18,27 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 # Import CNN Libraries
 from tensorflow.keras.models import Sequential
-# from tensorflow.keras.layers import Dense
-# from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Embedding
 from tensorflow.python.keras.layers import Input, Dense, Dropout, Flatten, Conv1D, GlobalMaxPooling1D
 import matplotlib.pyplot as plt
 # IMport RNN Libraries
-from tensorflow.python.keras.layers import LSTM
+from tensorflow.python.keras.layers import LSTM, Bidirectional, GRU
+
 
 class Sentiment_Analysis:
-
-	warnings.filterwarnings('ignore')
-
+	
 	def __init__(self, file_path):
 		self.file_path = file_path 
 		print('Retrieving IMBD Dataset')
 		self.dataset = pd.read_csv(file_path)
-		self.small_dataset = self.dataset[:50000]
+		print('No of samples = ', len(self.dataset))
+		self.small_dataset = self.dataset[:500]
 
-
+	'''
+	Process data and assign test/training sets
+	@params - movie review file
+	@returns - X_train, y_train, X_test, y_test
+	'''
 	def pre_process(self, file):
 		dataset = self.dataset
 		print('Pre Processing Data')
@@ -60,22 +61,7 @@ class Sentiment_Analysis:
 		# Clean textual data from 'Review'
 		stemmer = SnowballStemmer('english') 
 		# Function to clean up requirements
-		'''
-		def preprocess(sentence):
-			sentence = str(sentence)
-			sentence = sentence.lower()
-			clean_re = re.compile('<.*?>')
-			cleantext = re.sub(clean_re, '', sentence)
-			rmv_num = re.sub('[0-9]+', '', sentence)
-			tokenizer = RegexpTokenizer(r'\w+')
-			tokens = tokenizer.tokenize(rmv_num)
-			filtered_words = [w for w in tokens if len(w) > 2 if not w in stopwords.words('german')]
-			stem_words = [stemmer.stem(w) for w in filtered_words]
-			
-			return " ".join(filtered_words)
-		'''
-		# This function is significantly more efficient than above
-		def preprocess_text(sent):
+		def process_text(sent):
 			# Removing html tags
 		    sentence = remove_tags(sent)
 		    # Remove punctuations and numbers
@@ -90,19 +76,11 @@ class Sentiment_Analysis:
 		def remove_tags(text):
 			return TAG_RE.sub('', text)
 
+		# Store cleaned reviews into a list to use for train/test
 		X = []
 		sentences = list(movie_reviews['review'])
 		for sent in sentences:
-			X.append(preprocess_text(sent))
-
-		# movie_reviews['Review'] = movie_reviews['review'].map(lambda s:preprocess(s))
-		# # print(movie_reviews.Review[7])
-
-		# # Store cleaned reviews into a list to use for train/test
-		# X = []
-		# reviews = list(movie_reviews.Review)
-		# for review in reviews:
-		# 	X.append(review)
+			X.append(process_text(sent))
 
 		# Convert y(sentiment) column to numerical
 		y = []
@@ -125,78 +103,68 @@ class Sentiment_Analysis:
 		word_index: A dictionary of words and their uniquely assigned integers.
 		document_count:An integer count of the total number of documents that were used to fit the Tokenizer.
 		'''
-		# Convert text to numerical data
+		# Convert text to numerical data. Each unique word has a corresponding integer assigned
 		tokenizer = Tokenizer()
 		tokenizer.fit_on_texts(X_train)
 		X_train = tokenizer.texts_to_sequences(X_train)
 		X_test = tokenizer.texts_to_sequences(X_test)
-		
+
 		# Number of unique words
 		vocab_size = len(tokenizer.word_index) + 1  # need to add 1 because of 0 indexing
 		print('Number of Unique Words in Corpus: ', vocab_size)
 
 		# Padding
-		maxlen = 100 # Test on 100
-		X_train = pad_sequences(X_train, padding='post', maxlen=maxlen)
-		X_test = pad_sequences(X_test, padding='post', maxlen=maxlen)
+		max_len = 100 # Test on 100
+		X_train = pad_sequences(X_train, padding='post', maxlen=max_len)
+		X_test = pad_sequences(X_test, padding='post', maxlen=max_len)
 		
 		return X_train, y_train, X_test, y_test, vocab_size
 
 	def CNN(self, X_train, y_train, X_test, y_test, vocab_size):
-		print('Convolutional Neural Network')
-
-		X_train = X_train
-		X_test = X_test
-		y_train = y_train
-		y_test = y_test
+		print('\n=== Convolutional Neural Network ===\n')
 
 		# Max length of review for embedding
 		max_length = 100 
 		embedding_dim = 10
 		
-		# Define CNN model
+		# Build CNN model
 		model = Sequential()
 		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-		# model.add(Flatten())
 		model.add(Conv1D(128, 10, activation='relu'))
 		model.add(GlobalMaxPooling1D())
 		model.add(Dense(1, activation='sigmoid'))
-		# model.add(Flatten())
 		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 		print(model.summary())	
 
-		# Train the model
+		# Train model
 		history = model.fit(X_train, y_train, epochs=6, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate the model
+		# Evaluate model
 		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
 		print('Accuracy: %f' % (accuracy*100))
 
-		plt.plot(history.history['acc'])
-		plt.plot(history.history['val_acc'])
+		def display():
+			plt.plot(history.history['acc'])
+			plt.plot(history.history['val_acc'])
 
-		plt.title('model accuracy')
-		plt.ylabel('accuracy')
-		plt.xlabel('epoch')
-		plt.legend(['train','test'], loc = 'upper left')
-		plt.show()
+			plt.title('model accuracy')
+			plt.ylabel('accuracy')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
 
-		plt.plot(history.history['loss'])
-		plt.plot(history.history['val_loss'])
+			plt.plot(history.history['loss'])
+			plt.plot(history.history['val_loss'])
 
-		plt.title('model loss')
-		plt.ylabel('loss')
-		plt.xlabel('epoch')
-		plt.legend(['train','test'], loc = 'upper left')
-		plt.show()
+			plt.title('model loss')
+			plt.ylabel('loss')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+		# display()
 	
-	def RNN(self, X_train, y_train, X_test, y_test, vocab_size):
-		print('Recurrent Neural Network')
+	def LSTM(self, X_train, y_train, X_test, y_test, vocab_size):
+		print('\n=== Recurrent Neural Network with LSTM ===\n')
 		
-		X_train = X_train
-		X_test = X_test
-		y_train = y_train
-		y_test = y_test
-
 		# Max length of review for embedding
 		max_length = 100 
 		embedding_dim = 10
@@ -204,6 +172,7 @@ class Sentiment_Analysis:
 		model = Sequential()
 		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
 		model.add(LSTM(128))
+		model.add(Dropout(0.2))
 		model.add(Dense(1, activation='sigmoid'))
 		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
@@ -213,39 +182,123 @@ class Sentiment_Analysis:
 		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
 		# Evaluate the model
 		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		print('Accuracy: %f' % (accuracy*100))
+		print('Accuracy: %f' % (accuracy * 100))
 
-		plt.plot(history.history['acc'])
-		plt.plot(history.history['val_acc'])
+		def display():
+			plt.plot(history.history['acc'])
+			plt.plot(history.history['val_acc'])
 
-		plt.title('model accuracy')
-		plt.ylabel('accuracy')
-		plt.xlabel('epoch')
-		plt.legend(['train','test'], loc = 'upper left')
-		plt.show()
+			plt.title('model accuracy')
+			plt.ylabel('accuracy')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
 
-		plt.plot(history.history['loss'])
-		plt.plot(history.history['val_loss'])
+			plt.plot(history.history['loss'])
+			plt.plot(history.history['val_loss'])
 
-		plt.title('model loss')
-		plt.ylabel('loss')
-		plt.xlabel('epoch')
-		plt.legend(['train','test'], loc = 'upper left')
-		plt.show()
+			plt.title('Model Loss')
+			plt.ylabel('loss')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+		# display()
 
-	
-	# def LSTM():
+	def bi_LSTM(self, X_train, y_train, X_test, y_test, vocab_size):
+		print('\n=== Recurrent Neural Network with bidirectional LSTM ===\n')
+		
+		# Max length of review for embedding
+		max_length = 100 
+		embedding_dim = 10
 
-	# CNN()
+		model = Sequential()
+		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+		model.add(Dropout(0.2))
+		model.add(Bidirectional(LSTM(20, dropout=0.3)))
+		model.add(Dense(1, activation="sigmoid"))
+		
+		model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
+		print(model.summary())	
+
+		# Train the model
+		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
+		# Evaluate the model
+		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+		print('Accuracy: %f' % (accuracy * 100))
+
+		def display():
+			plt.plot(history.history['acc'])
+			plt.plot(history.history['val_acc'])
+
+			plt.title('model accuracy')
+			plt.ylabel('accuracy')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+
+			plt.plot(history.history['loss'])
+			plt.plot(history.history['val_loss'])
+
+			plt.title('Model Loss')
+			plt.ylabel('loss')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+		# display()
+
+	def GRU(self, X_train, y_train, X_test, y_test, vocab_size):
+		print('\n=== Gated Recurrent Network ===\n')
+		
+		# Max length of review for embedding
+		max_length = 100 
+		embedding_dim = 10
+		
+		model = Sequential()
+		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+		model.add(GRU(50, return_sequences=True))
+		model.add(GRU(1, return_sequences=False))
+		model.add(Dense(1, activation='sigmoid'))
+		model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    
+		print(model.summary())	
+
+		# Train the model
+		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
+		# Evaluate the model
+		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+		print('Accuracy: %f' % (accuracy * 100))
+
+		def display():
+			plt.plot(history.history['acc'])
+			plt.plot(history.history['val_acc'])
+
+			plt.title('model accuracy')
+			plt.ylabel('accuracy')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+
+			plt.plot(history.history['loss'])
+			plt.plot(history.history['val_loss'])
+
+			plt.title('Model Loss')
+			plt.ylabel('loss')
+			plt.xlabel('epoch')
+			plt.legend(['train','test'], loc = 'upper left')
+			plt.show()
+		# display()
 
 if __name__ == "__main__":
 
     file = '/Users/selina/Code/Python/SSL/CNN_vs_RNN/IMDB_Dataset.csv'
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
-    # extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
-    extractor.RNN(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.LSTM(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
+
     
 
 
