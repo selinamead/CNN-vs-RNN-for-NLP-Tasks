@@ -192,7 +192,7 @@ class POS_Tagging:
 		# model.add(GlobalMaxPooling1D())
 		# model.add(InputLayer(input_shape=(MAX_LENGTH,)))
 		# model.add(Embedding(input_dim=length_word_index, output_dim=128, input_length=MAX_LENGTH))
-		model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, activation='relu'))
+		model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
 		model.add(Dense(length_tag_index))
 		model.add(Activation('softmax'))
 		model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
