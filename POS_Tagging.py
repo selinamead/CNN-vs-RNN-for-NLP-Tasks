@@ -29,7 +29,11 @@ class POS_Tagging:
 		dataset = data#[0:100]
 		print('Size of dataset = ', len(dataset))
 		print(dataset[1])
-	
+		'''
+		[('Pierre', 'NNP'), ('Vinken', 'NNP'), (',', ','), ('61', 'CD'), ('years', 'NNS'), 
+		('old', 'JJ'), (',', ','), ('will', 'MD'), ('join', 'VB'), ('the', 'DT'), 
+		('board', 'NN'), ('Nov.', 'NNP'), ('29', 'CD'), ('.', '.')]
+		'''
  		## Seperaste the sentences and pos tags so there are corresponding lists of lisrts of each ##
 		sentences = []
 		pos_tags = [] 
@@ -51,6 +55,12 @@ class POS_Tagging:
 		
 		# print(sentences[1854])
 		# print(len(sentences[1854]))
+
+		'''
+ 		['Pierre' 'Vinken' ',' '61' 'years' 'old' ',' 'will' 'join' 'the' 'board'
+ 		'Nov.' '29' '.']
+		['NNP' 'NNP' ',' 'CD' 'NNS' 'JJ' ',' 'MD' 'VB' 'DT''NN' 'NNP' 'CD' '.']
+ 		'''
 
 		## Split into test/train ##
 		X_train, X_test, y_train, y_test = train_test_split(sentences, pos_tags, test_size=0.2)
@@ -92,7 +102,7 @@ class POS_Tagging:
 		length_tag_index = len(indexed_tags)
 		print(length_tag_index)
 
-		# Display
+		# For display only
 		N = 10
 		output = dict(list(indexed_words.items())[0: N]) 
 		print(output)
@@ -123,6 +133,26 @@ class POS_Tagging:
 		    X_test_sent.append(sent_ints)
 		print(X_test_sent[0])
 
+		# for tags in y_train:
+		# 	tag_ints = []
+		# 	for tag in tags:
+		# 		try:
+		# 			tag_ints.append(indexed_tags[tag])
+		# 		except KeyError:
+		# 			tag_ints.append(indexed_tags['-OOV-'])
+		# 	y_train_tags.append(tag_ints)
+		# print(y_train_tags[0])
+
+		# for tags in y_test:
+		# 	tag_ints = []
+		# 	for tag in tags:
+		# 		try:
+		# 			tag_ints.append(indexed_tags[tag])
+		# 		except KeyError:
+		# 			tag_ints.append(indexed_tags['-OOV-'])
+		# 	y_test_tags.append(tag_ints)
+		# print(y_test_tags[0])
+
 		for s in y_train:
 			y_train_tags.append([indexed_tags[t] for t in s])
  
@@ -140,10 +170,10 @@ class POS_Tagging:
 		y_train_tags = pad_sequences(y_train_tags, maxlen=MAX_LENGTH, padding='post')
 		y_test_tags = pad_sequences(y_test_tags, maxlen=MAX_LENGTH, padding='post')
 		 
-		# print(X_train_sent[0])
-		# print(X_test_sent[0])
-		# print(y_train_tags[0])
-		# print(y_test_tags[0])
+		print(X_train_sent[0])
+		print(X_test_sent[0])
+		print(y_train_tags[0])
+		print(y_test_tags[0])
 
 		return (X_train_sent, y_train_tags, X_test_sent, y_test_tags, 
 				MAX_LENGTH, length_word_index, length_tag_index)
@@ -334,9 +364,9 @@ if __name__ == "__main__":
 	(X_train, y_train, X_test, y_test, 
 	MAX_LENGTH,length_word_index, length_tag_index) = extractor.preprocessing(dataset)
 	extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 
 
 
