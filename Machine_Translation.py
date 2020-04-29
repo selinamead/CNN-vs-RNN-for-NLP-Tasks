@@ -1,5 +1,6 @@
 
 ''' Machine Translation of German to English, English to German using CNN and RNN architectures '''
+
 # import csv
 import string
 import re
@@ -126,7 +127,7 @@ class Machine_Translation:
 		print('English Vocabulary Size: %d' % eng_vocab_size)
 		eng_length = 8
 
-		# prepare Deutch tokenizer
+		# prepare German tokenizer
 		ger_tokenizer = tokenization(ger_sent)
 		ger_vocab_size = len(ger_tokenizer.word_index) + 1 # add 1 for 0 indexing
 		print('German Vocabulary Size: %d' % ger_vocab_size)
@@ -142,13 +143,27 @@ class Machine_Translation:
 	         return seq
 
 		# Split into train and test
-		# German will be X, English will be y
+		# German is X, English is y
 		X_train, X_test, y_train, y_test = train_test_split(ger_sent, eng_sent, test_size=0.2, random_state=42)
 
 		print(X_train[0],':', y_train[0])
 		print(X_test[0], ':', y_test[0])
-		
-		# Convert text to numerical data. Each unique word has a corresponding integer assigned
+
+		# Bidirection and GRU needs same length sequeneces (change padding length of eng to ger)
+		X_train = encode_sequences(ger_tokenizer, ger_length, X_train)
+		y_train = encode_sequences(eng_tokenizer, ger_length, y_train)
+		X_test = encode_sequences(ger_tokenizer, ger_length, X_test)
+		y_test = encode_sequences(eng_tokenizer, ger_length, y_test)
+
+		print(X_train[0])
+		print(y_train[0])
+		print(X_test[0])
+		print(y_test[0])
+
+		print('size of dimensions:')
+		print(eng_vocab_size, ger_vocab_size, max_len)
+
+		# # Convert text to numerical data. Each unique word has a corresponding integer assigned
 		# tokenizer = Tokenizer(oov_token = True)
 		# tokenizer.fit_on_texts(X_train)
 		# tokenizer.fit_on_texts(y_train)
@@ -175,16 +190,6 @@ class Machine_Translation:
 		# print(X_test[0])
 		# print(y_test[0])
 
-		# Bidirection needs same length sequeneces (change padding length of eng to ger)
-		X_train = encode_sequences(ger_tokenizer, ger_length, X_train)
-		y_train = encode_sequences(eng_tokenizer, ger_length, y_train)
-		X_test = encode_sequences(ger_tokenizer, ger_length, X_test)
-		y_test = encode_sequences(eng_tokenizer, ger_length, y_test)
-
-		print(X_train[0])
-		print(y_train[0])
-		print(X_test[0])
-		print(y_test[0])
 
 		return X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len
 
@@ -193,13 +198,14 @@ class Machine_Translation:
 		units = 128
 		model = Sequential()
 		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length=max_len))
-		model.add(Conv1D(filters=max_len, kernel_size=4, activation='softmax'))
+		model.add(Conv1D(filters=max_len, kernel_size=4, padding='same', activation='softmax'))
 		# model.add(GlobalMaxPooling1D())
 		model.add(Dense(eng_vocab_size, activation='softmax'))
 		model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
 
 		model.summary()
-
+		print('MAX LENGTH', max_len) 
+		
 		# Train model
 		# history = model.fit(X_train, y_train, batch_size=100, epochs=3, verbose=1, validation_split=0.2)
 		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=3, batch_size=units, verbose=1, validation_split=0.2)
@@ -208,18 +214,14 @@ class Machine_Translation:
 		print('Accuracy: %f' % (accuracy * 100))
 
 
-	def LSTM(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
-		print(X_train.shape)
-		print(y_train.shape)
-		print(X_test.shape)
-		print(y_test.shape)
+	def LSTM(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
 		units = 128
 		model = Sequential()
-		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length= 11))
+		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length=11))
 		model.add(LSTM(units))
-		model.add(RepeatVector(8))
+		model.add(RepeatVector(11))
 		model.add(LSTM(units, return_sequences=True))
 		model.add(Dense(eng_vocab_size, activation='softmax'))
 		model.compile(optimizer=RMSprop(lr=0.01), 
@@ -235,11 +237,6 @@ class Machine_Translation:
 		print('Accuracy: %f' % (accuracy * 100))
 
 	def bi_LSTM(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
-
-		print(X_train.shape)
-		print(y_train.shape)
-		print(X_test.shape)
-		print(y_test.shape)
 
 		units = 128
 		model = Sequential()
@@ -300,11 +297,10 @@ if __name__ == "__main__":
     data = extractor.get_dataset()
     # extractor.pre_process(data)
     X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len = extractor.pre_process(data)
-    # extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    # extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    # extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
     extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-
 
 
 
