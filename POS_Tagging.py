@@ -1,7 +1,10 @@
+'''
+
+'''
+
+
 import nltk
 import numpy as np
-# from sklearn.model_selection import train_test_split
-# from keras.preprocessing.sequence import pad_sequences
 
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.sequence import pad_sequences
@@ -132,26 +135,6 @@ class POS_Tagging:
 		 
 		    X_test_sent.append(sent_ints)
 		print(X_test_sent[0])
-
-		# for tags in y_train:
-		# 	tag_ints = []
-		# 	for tag in tags:
-		# 		try:
-		# 			tag_ints.append(indexed_tags[tag])
-		# 		except KeyError:
-		# 			tag_ints.append(indexed_tags['-OOV-'])
-		# 	y_train_tags.append(tag_ints)
-		# print(y_train_tags[0])
-
-		# for tags in y_test:
-		# 	tag_ints = []
-		# 	for tag in tags:
-		# 		try:
-		# 			tag_ints.append(indexed_tags[tag])
-		# 		except KeyError:
-		# 			tag_ints.append(indexed_tags['-OOV-'])
-		# 	y_test_tags.append(tag_ints)
-		# print(y_test_tags[0])
 
 		for s in y_train:
 			y_train_tags.append([indexed_tags[t] for t in s])
@@ -322,9 +305,9 @@ class POS_Tagging:
 		model = Sequential()
 		model.add(InputLayer(input_shape=(MAX_LENGTH, )))
 		model.add(Embedding(length_word_index, 128))
-		model.add(GRU(50, return_sequences=True))
-		model.add(GRU(length_tag_index, return_sequences=False))
-		model.add(Dense(1, activation='sigmoid'))
+		model.add(GRU(50, return_sequences=True)) #50 #256
+		# model.add(GRU(length_tag_index, return_sequences=False))
+		model.add(Dense(length_tag_index, activation='sigmoid'))
 		# model.add(Activation('softmax'))
 		 
 		model.compile(loss='categorical_crossentropy',
@@ -333,6 +316,7 @@ class POS_Tagging:
 		              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 		model.summary()
+		
 
 		# One hot encode the tags
 		def onehot_encode_tags(sequences, categories):
@@ -364,10 +348,10 @@ if __name__ == "__main__":
 	(X_train, y_train, X_test, y_test, 
 	MAX_LENGTH,length_word_index, length_tag_index) = extractor.preprocessing(dataset)
 	extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 
-
+	
 
 
