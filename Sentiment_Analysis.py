@@ -61,6 +61,7 @@ class Sentiment_Analysis:
 		# Clean textual data from 'Review'
 		stemmer = SnowballStemmer('english') 
 		# Function to clean up requirements
+		# Souce: 
 		def process_text(sent):
 			# Removing html tags
 		    sentence = remove_tags(sent)
@@ -82,7 +83,7 @@ class Sentiment_Analysis:
 		for sent in sentences:
 			X.append(process_text(sent))
 
-		# Convert y(sentiment) column to numerical
+		# Convert y to num
 		y = []
 		sentiments = list(movie_reviews.sentiment)
 		for sent in sentiments:
@@ -95,8 +96,6 @@ class Sentiment_Analysis:
 		X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 		# Convert text to numerical data
-		# https://machinelearningmastery.com/prepare-text-data-deep-learning-keras/
-		
 		'''
 		word_counts: A dictionary of words and their counts.
 		word_docs: A dictionary of words and how many documents each appeared in.
@@ -129,8 +128,8 @@ class Sentiment_Analysis:
 		
 		# Build CNN model
 		model = Sequential()
-		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-		model.add(Conv1D(128, 10, activation='relu'))
+		model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
+		model.add(Conv1D(filters=128, kernel_size=10, padding='same', activation='relu'))
 		model.add(GlobalMaxPooling1D())
 		model.add(Dense(1, activation='sigmoid'))
 		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
@@ -299,6 +298,5 @@ if __name__ == "__main__":
     extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
     extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
 
-    
 
 
