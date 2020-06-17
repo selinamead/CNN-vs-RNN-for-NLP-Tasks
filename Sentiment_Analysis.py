@@ -23,6 +23,8 @@ from tensorflow.python.keras.layers import Input, Dense, Dropout, Flatten, Conv1
 import matplotlib.pyplot as plt
 # IMport RNN Libraries
 from tensorflow.python.keras.layers import LSTM, Bidirectional, GRU
+from keras import regularizers
+
 
 
 class Sentiment_Analysis:
@@ -48,7 +50,7 @@ class Sentiment_Analysis:
 			dataset = dataset.dropna(how='any', axis=0)
 		
 		# Get Movie Reviews for cleaning
-		small = True # Using small dataset until all code is working
+		small = False # Using small dataset until all code is working
 		if small:
 			movie_reviews = self.small_dataset
 			print('Size of Dataset: ', movie_reviews.shape[0])
@@ -119,47 +121,99 @@ class Sentiment_Analysis:
 		
 		return X_train, y_train, X_test, y_test, vocab_size
 
+
 	def CNN(self, X_train, y_train, X_test, y_test, vocab_size):
 		print('\n=== Convolutional Neural Network ===\n')
 
 		# Max length of review for embedding
 		max_length = 100 
 		embedding_dim = 10
-		
-		# Build CNN model
-		model = Sequential()
-		model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
-		model.add(Conv1D(filters=128, kernel_size=10, padding='same', activation='relu'))
-		model.add(GlobalMaxPooling1D())
-		model.add(Dense(1, activation='sigmoid'))
-		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
-		print(model.summary())	
 
-		# Train model
-		history = model.fit(X_train, y_train, epochs=6, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate model
-		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		print('Accuracy: %f' % (accuracy*100))
+		def best_model():
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		def display():
-			plt.plot(history.history['acc'])
-			plt.plot(history.history['val_acc'])
+			for i in dropout_rate:
+				model = Sequential()
+				model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
+				model.add(Conv1D(filters=128, kernel_size=5, padding='same', activation='relu'))
+				model.add(GlobalMaxPooling1D())
+				model.add(Dropout(i))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
+				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-			plt.title('model accuracy')
-			plt.ylabel('accuracy')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
+				list_of_dropout.append(i)
 
-			plt.plot(history.history['loss'])
-			plt.plot(history.history['val_loss'])
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
 
-			plt.title('model loss')
-			plt.ylabel('loss')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
-		# display()
+					model.fit(X_train, y_train, epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test, verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			# epoch, dropout = best_model()
+			epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+	
+			# Build CNN model
+			model = Sequential()
+			model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
+			model.add(Conv1D(filters=128, kernel_size=5, padding='same', activation='relu'))
+			model.add(GlobalMaxPooling1D())
+			model.add(Dropout(dropout))
+			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
+			model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+			print(model.summary())	
+
+			# Train model
+			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate model
+			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			print('Accuracy: %f' % (accuracy*100))
+
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
 	
 	def LSTM(self, X_train, y_train, X_test, y_test, vocab_size):
 		print('\n=== Recurrent Neural Network with LSTM ===\n')
@@ -168,40 +222,89 @@ class Sentiment_Analysis:
 		max_length = 100 
 		embedding_dim = 10
 
-		model = Sequential()
-		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-		model.add(LSTM(128))
-		model.add(Dropout(0.2))
-		model.add(Dense(1, activation='sigmoid'))
-		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+		def best_model():
 
-		print(model.summary())	
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		# Train the model
-		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+			for i in dropout_rate:
+				model = Sequential()
+				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+				model.add(LSTM(128))
+				model.add(Dropout(i))
+				model.add(Dense(1, activation='sigmoid'))
+				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
-		def display():
-			plt.plot(history.history['acc'])
-			plt.plot(history.history['val_acc'])
+				list_of_dropout.append(i)
 
-			plt.title('model accuracy')
-			plt.ylabel('accuracy')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
 
-			plt.plot(history.history['loss'])
-			plt.plot(history.history['val_loss'])
+					model.fit(X_train, y_train, epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test, verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
 
-			plt.title('Model Loss')
-			plt.ylabel('loss')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
-		# display()
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+			model.add(LSTM(128))
+			model.add(Dropout(dropout))
+			model.add(Dense(1, activation='sigmoid'))
+			model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+
+			print(model.summary())	
+
+			# Train the model
+			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('Model Loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
 
 	def bi_LSTM(self, X_train, y_train, X_test, y_test, vocab_size):
 		print('\n=== Recurrent Neural Network with bidirectional LSTM ===\n')
@@ -210,93 +313,195 @@ class Sentiment_Analysis:
 		max_length = 100 
 		embedding_dim = 10
 
-		model = Sequential()
-		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-		model.add(Dropout(0.2))
-		model.add(Bidirectional(LSTM(20, dropout=0.3)))
-		model.add(Dense(1, activation="sigmoid"))
+		def best_model():
+
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
+
+			for i in dropout_rate:
+				model = Sequential()
+				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+				model.add(Dropout(dropout))
+				model.add(Bidirectional(LSTM(20, dropout=dropout)))
+				model.add(Dense(1, activation="sigmoid"))
+				
+				model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+				list_of_dropout.append(i)
+					
+				for e in epochs:
+						list_of_all_dropouts.append(i)
+						list_of_epochs.append(e)
+
+						model.fit(X_train, y_train, epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+						score = model.evaluate(X_test, y_test, verbose=1)
+						list_of_all_scores.append(score)
+						
+						if score not in list_of_scores:
+							list_of_scores.append(score)
+
+			#print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
 		
-		model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+		def build_model():
 
-		print(model.summary())	
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
 
-		# Train the model
-		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+			model = Sequential()
+			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+			model.add(Dropout(dropout))
+			model.add(Bidirectional(LSTM(20, dropout=dropout)))
+			model.add(Dense(1, activation="sigmoid"))
+			
+			model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-		def display():
-			plt.plot(history.history['acc'])
-			plt.plot(history.history['val_acc'])
+			print(model.summary())	
 
-			plt.title('model accuracy')
-			plt.ylabel('accuracy')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
+			# Train the model
+			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
 
-			plt.plot(history.history['loss'])
-			plt.plot(history.history['val_loss'])
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
 
-			plt.title('Model Loss')
-			plt.ylabel('loss')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
-		# display()
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
 
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('Model Loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
+
+	
 	def GRU(self, X_train, y_train, X_test, y_test, vocab_size):
 		print('\n=== Gated Recurrent Network ===\n')
 		
 		# Max length of review for embedding
 		max_length = 100 
 		embedding_dim = 10
+
+		def best_model():
+
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
+
+			for i in dropout_rate:
 		
-		model = Sequential()
-		model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-		model.add(GRU(50, return_sequences=True))
-		model.add(GRU(1, return_sequences=False))
-		model.add(Dense(1, activation='sigmoid'))
-		model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+				model = Sequential()
+				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+				model.add(GRU(50, return_sequences=True))
+				model.add(GRU(1, return_sequences=False))
+				model.add(Dropout(i))
+				model.add(Dense(1, activation='sigmoid'))
+				model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
     
-		print(model.summary())	
+				list_of_dropout.append(i)
+					
+				for e in epochs:
+						list_of_all_dropouts.append(i)
+						list_of_epochs.append(e)
 
-		# Train the model
-		history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+						model.fit(X_train, y_train, epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+						score = model.evaluate(X_test, y_test, verbose=1)
+						list_of_all_scores.append(score)
+						
+						if score not in list_of_scores:
+							list_of_scores.append(score)
 
-		def display():
-			plt.plot(history.history['acc'])
-			plt.plot(history.history['val_acc'])
+			#print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
 
-			plt.title('model accuracy')
-			plt.ylabel('accuracy')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
+			return epoch, dropout
 
-			plt.plot(history.history['loss'])
-			plt.plot(history.history['val_loss'])
+		def build_model():
 
-			plt.title('Model Loss')
-			plt.ylabel('loss')
-			plt.xlabel('epoch')
-			plt.legend(['train','test'], loc = 'upper left')
-			plt.show()
-		# display()
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+			model.add(GRU(50, return_sequences=True))
+			model.add(GRU(1, return_sequences=False))
+			model.add(Dropout(dropout))
+			model.add(Dense(1, activation='sigmoid'))
+			model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    
+			print(model.summary())	
+
+			# Train the model
+			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('Model Loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
 
 if __name__ == "__main__":
 
     file = '/Users/selina/Code/Python/SSL/CNN_vs_RNN/IMDB_Dataset.csv'
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
-    extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
+    # extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
     extractor.LSTM(X_train, y_train, X_test, y_test, vocab_size)
-    extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
-    extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
-
+    # extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
+    # extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
 
 
