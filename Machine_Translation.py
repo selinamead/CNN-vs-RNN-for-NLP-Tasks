@@ -195,86 +195,347 @@ class Machine_Translation:
 
 	def CNN(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
-		units = 128
-		model = Sequential()
-		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length=max_len))
-		model.add(Conv1D(filters=max_len, kernel_size=4, padding='same', activation='softmax'))
-		# model.add(GlobalMaxPooling1D())
-		model.add(Dense(eng_vocab_size, activation='softmax'))
-		model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+		def best_model():
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		model.summary()
-		print('MAX LENGTH', max_len) 
+			for i in dropout_rate:
 		
-		# Train model
-		# history = model.fit(X_train, y_train, batch_size=100, epochs=3, verbose=1, validation_split=0.2)
-		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=3, batch_size=units, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+				model = Sequential()
+				model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=max_len))
+				model.add(Conv1D(filters=max_len, kernel_size=4, padding='same', activation='softmax'))
+				# model.add(GlobalMaxPooling1D())
+				model.add(Dropout(i))
+				model.add(Dense(eng_vocab_size, activation='softmax'))
+				model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+				# model.summary()
+				list_of_dropout.append(i)
+
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=max_len))
+			model.add(Conv1D(filters=max_len, kernel_size=4, padding='same', activation='softmax'))
+			# model.add(GlobalMaxPooling1D())
+			model.add(Dropout(dropout))
+			model.add(Dense(eng_vocab_size, activation='softmax'))
+			model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+
+			model.summary()
+			
+			# Train model
+			# history = model.fit(X_train, y_train, batch_size=100, epochs=3, verbose=1, validation_split=0.2)
+			history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
 
 
 
 	def LSTM(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
-		units = 128
-		model = Sequential()
-		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length=11))
-		model.add(LSTM(units))
-		model.add(RepeatVector(11))
-		model.add(LSTM(units, return_sequences=True))
-		model.add(Dense(eng_vocab_size, activation='softmax'))
-		model.compile(optimizer=RMSprop(lr=0.01), 
-					  loss='sparse_categorical_crossentropy', 
-					  metrics=['acc'])
+		def best_model():
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		model.summary()
+			for i in dropout_rate:
 
-		# Train model
-		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=3, batch_size=units, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+				model = Sequential()
+				model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=11))
+				model.add(LSTM(128))
+				model.add(RepeatVector(11))
+				model.add(LSTM(128, return_sequences=True))
+				model.add(Dropout(i))
+				model.add(Dense(eng_vocab_size, activation='softmax'))
+				model.compile(optimizer=RMSprop(lr=0.01), 
+							  loss='sparse_categorical_crossentropy', 
+							  metrics=['acc'])
+
+				list_of_dropout.append(i)
+
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=11))
+			model.add(LSTM(128))
+			model.add(RepeatVector(11))
+			model.add(LSTM(128, return_sequences=True))
+			model.add(Dropout(dropout))
+			model.add(Dense(eng_vocab_size, activation='softmax'))
+			model.compile(optimizer=RMSprop(lr=0.01), 
+						  loss='sparse_categorical_crossentropy', 
+						  metrics=['acc'])
+			model.summary()
+
+			# Train model
+			history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
+
 
 	def bi_LSTM(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
-		units = 128
-		model = Sequential()
-		model.add(Embedding(input_dim=ger_vocab_size, output_dim=units, input_length=max_len))
-		model.add(Bidirectional(LSTM(units, return_sequences=True)))
-		# model.add(TimeDistributed(Dense(eng_vocab_size)))
-		# model.add(Activation('softmax'))
-		model.add(Dense(eng_vocab_size, activation='softmax'))
-		model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+		def best_model():
 
-		model.summary()
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		# Train model
-		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=3, batch_size=units, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+			for i in dropout_rate:
+				model = Sequential()
+				model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=max_len))
+				model.add(Bidirectional(LSTM(128, return_sequences=True)))
+				# model.add(TimeDistributed(Dense(eng_vocab_size)))
+				# model.add(Activation('softmax'))
+				model.add(Dropout(i))
+				model.add(Dense(eng_vocab_size, activation='softmax'))
+				model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
 
-		# Bidirection needs same length sequeneces (change padding length of eng to ger)
-		
+				list_of_dropout.append(i)
+
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(input_dim=ger_vocab_size, output_dim=128, input_length=max_len))
+			model.add(Bidirectional(LSTM(128, return_sequences=True)))
+			# model.add(TimeDistributed(Dense(eng_vocab_size)))
+			# model.add(Activation('softmax'))
+			model.add(Dropout(dropout))
+			model.add(Dense(eng_vocab_size, activation='softmax'))
+			model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+
+			model.summary()
+
+			# Train model
+			history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			# Bidirection needs same length sequeneces (change padding length of eng to ger)
+			
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
+
+
 	def GRU(self, X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len):
 
-		units = 128
-		model = Sequential()
-		model.add(Embedding(input_dim= ger_vocab_size, output_dim=units, input_length=max_len))
-		model.add(GRU(units, return_sequences=True))
-		# model.add(GRU(eng_vocab_size, return_sequences=False))
-		model.add(Dense(eng_vocab_size, activation='softmax'))
-		# model.add(Activation('softmax'))
-		 
-		model.compile(loss='sparse_categorical_crossentropy',
-		              optimizer=RMSprop(lr=0.01),
-		              metrics=['accuracy'])
-		             
+		def best_model():
 
-		model.summary()
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		print(model.summary())	
+			for i in dropout_rate:
+
+				model = Sequential()
+				model.add(Embedding(input_dim= ger_vocab_size, output_dim=128, input_length=max_len))
+				model.add(GRU(128, return_sequences=True))
+				# model.add(GRU(eng_vocab_size, return_sequences=False))
+				model.add(Dropout(i))
+				model.add(Dense(eng_vocab_size, activation='softmax'))
+				# model.add(Activation('softmax'))
+				model.compile(loss='sparse_categorical_crossentropy',
+				              optimizer=RMSprop(lr=0.01),
+				              metrics=['accuracy'])
+				             
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=e, batch_size=128, verbose=1, validation_split=0.2)
+					score = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+		
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(input_dim= ger_vocab_size, output_dim=128, input_length=max_len))
+			model.add(GRU(128, return_sequences=True))
+			# model.add(GRU(eng_vocab_size, return_sequences=False))
+			model.add(Dropout(dropout))
+			model.add(Dense(eng_vocab_size, activation='softmax'))
+			# model.add(Activation('softmax'))
+			model.compile(loss='sparse_categorical_crossentropy',
+			              optimizer=RMSprop(lr=0.01),
+			              metrics=['accuracy'])
+			model.summary()
+
+		# print(model.summary())	
 
 		# # Train the model
 		# history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
@@ -283,7 +544,7 @@ class Machine_Translation:
 		# print('Accuracy: %f' % (accuracy * 100))
 
 		# Train model
-		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=3, batch_size=units, verbose=1, validation_split=0.2)
+		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
 		# Evaluate the model
 		loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
 		print('Accuracy: %f' % (accuracy * 100))
@@ -297,10 +558,10 @@ if __name__ == "__main__":
     data = extractor.get_dataset()
     # extractor.pre_process(data)
     X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len = extractor.pre_process(data)
-    extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    # extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
     extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    # extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    # extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
 
 
 
