@@ -1,7 +1,7 @@
 '''
+Part of Speech tagging implemented using CNN and RNN architectures
 
 '''
-
 
 import nltk
 import numpy as np
@@ -17,9 +17,7 @@ from tensorflow.python.keras.layers import Dense, LSTM, GRU, InputLayer, Bidirec
 from tensorflow.python.keras.optimizers import Adam
 from keras import backend as K
 
-'''
-Part of Speech tagging using CNN and RNN architectures
-'''
+
 
 class POS_Tagging:
 
@@ -166,178 +164,530 @@ class POS_Tagging:
 		print('\n=== Convolutional Neural Network ===\n')
 		
 		print(y_train.shape) #(3131, 272)
-		variable = y_train.shape[0]
-		# Build CNN model
-		model = Sequential()
-		model.add(Embedding(input_dim=length_word_index, output_dim=length_tag_index, input_length=MAX_LENGTH))
-		# model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, activation='relu'))
-		# model.add(GlobalMaxPooling1D())
-		# model.add(InputLayer(input_shape=(MAX_LENGTH,)))
-		# model.add(Embedding(input_dim=length_word_index, output_dim=128, input_length=MAX_LENGTH))
-		model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
-		model.add(Dense(length_tag_index))
-		model.add(Activation('softmax'))
-		model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-		print(model.summary())	
+		# variable = y_train.shape[0]
 
-		# One hot encode the tags
-		def onehot_encode_tags(sequences, categories):
-		    cat_sequences = []
-		    for seq in sequences:
-		        cats = []
-		        for item in seq:
-		            cats.append(np.zeros(categories))
-		            cats[-1][item] = 1.0
-		        cat_sequences.append(cats)
-		    return np.array(cat_sequences)
+		def best_model():
 
-		cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
-		print(cat_train_tags_y[0])
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		print('y_train shape: ', y_train.shape)
-		print('MAX_LENGTH: ', MAX_LENGTH)
-		print('length_word_index: ', length_word_index)
-		print('length_tag_index: ', length_tag_index)
+			for i in dropout_rate:
+				# Build CNN model
+				model = Sequential()
+				model.add(Embedding(input_dim=length_word_index, output_dim=length_tag_index, input_length=MAX_LENGTH))
+				# model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, activation='relu'))
+				# model.add(GlobalMaxPooling1D())
+				# model.add(InputLayer(input_shape=(MAX_LENGTH,)))
+				# model.add(Embedding(input_dim=length_word_index, output_dim=128, input_length=MAX_LENGTH))
+				model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
+				model.add(Dropout(i))
+				model.add(Dense(length_tag_index))
+				model.add(Activation('softmax'))
+				model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+				# print(model.summary())
+				list_of_dropout.append(i)
 
-		# Train the model
-		history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=1, validation_split=0.2)
-		
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
-		print('Accuracy: %f' % (accuracy * 100))
+				# One hot encode the tags
+				def onehot_encode_tags(sequences, categories):
+				    cat_sequences = []
+				    for seq in sequences:
+				        cats = []
+				        for item in seq:
+				            cats.append(np.zeros(categories))
+				            cats[-1][item] = 1.0
+				        cat_sequences.append(cats)
+				    return np.array(cat_sequences)
+
+				cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+				
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=e, validation_split=0.2)
+					score = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout	
+
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 5, 0.2
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(Embedding(input_dim=length_word_index, output_dim=length_tag_index, input_length=MAX_LENGTH))
+			# model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, activation='relu'))
+			# model.add(GlobalMaxPooling1D())
+			# model.add(InputLayer(input_shape=(MAX_LENGTH,)))
+			# model.add(Embedding(input_dim=length_word_index, output_dim=128, input_length=MAX_LENGTH))
+			model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
+			model.add(Dropout(dropout))
+			model.add(Dense(length_tag_index))
+			model.add(Activation('softmax'))
+			model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+			# print(model.summary())
+
+			# One hot encode the tags
+			def onehot_encode_tags(sequences, categories):
+			    cat_sequences = []
+			    for seq in sequences:
+			        cats = []
+			        for item in seq:
+			            cats.append(np.zeros(categories))
+			            cats[-1][item] = 1.0
+			        cat_sequences.append(cats)
+			    return np.array(cat_sequences)
+
+			cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+			print(cat_train_tags_y[0])
+
+			cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+			print(cat_train_tags_y[0])
+
+			print('y_train shape: ', y_train.shape)
+			print('MAX_LENGTH: ', MAX_LENGTH)
+			print('length_word_index: ', length_word_index)
+			print('length_tag_index: ', length_tag_index)
+
+			# Train the model
+			history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=epoch, validation_split=0.2)
+			
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			# display()
+
+		build_model()
 
 	def LSTM(self, X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index):
 
-		model = Sequential()
-		model.add(InputLayer(input_shape=(MAX_LENGTH, )))
-		model.add(Embedding(length_word_index, 128))
-		# model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
-		model.add(LSTM(256, return_sequences=True))
-		model.add(TimeDistributed(Dense(length_tag_index)))
-		model.add(Activation('softmax'))
-		 
-		model.compile(loss='categorical_crossentropy',
-		              optimizer=Adam(0.001),
-		              metrics=['accuracy'])
-		              # metrics=['accuracy', ignore_class_accuracy(0)])
+		def best_model():
 
-		model.summary()
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		# One hot encode the tags
-		def onehot_encode_tags(sequences, categories):
-		    cat_sequences = []
-		    for seq in sequences:
-		        cats = []
-		        for item in seq:
-		            cats.append(np.zeros(categories))
-		            cats[-1][item] = 1.0
-		        cat_sequences.append(cats)
-		    return np.array(cat_sequences)
-
-		cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
-		print(cat_train_tags_y[0])
-
-		# Train the model
-		history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=1, validation_split=0.2)
+			for i in dropout_rate:
 		
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
-		print('Accuracy: %f' % (accuracy * 100))
+				model = Sequential()
+				model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+				model.add(Embedding(length_word_index, 128))
+				model.add(LSTM(256, return_sequences=True))
+				model.add(Dropout(i))
+				model.add(TimeDistributed(Dense(length_tag_index)))
+				model.add(Activation('softmax'))
+				 
+				model.compile(loss='categorical_crossentropy',
+				              optimizer=Adam(0.001),
+				              metrics=['accuracy'])
+				              # metrics=['accuracy', ignore_class_accuracy(0)])
+
+				# model.summary()
+				list_of_dropout.append(i)
+
+				# One hot encode the tags
+				def onehot_encode_tags(sequences, categories):
+				    cat_sequences = []
+				    for seq in sequences:
+				        cats = []
+				        for item in seq:
+				            cats.append(np.zeros(categories))
+				            cats[-1][item] = 1.0
+				        cat_sequences.append(cats)
+				    return np.array(cat_sequences)
+
+				cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+				
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=e, validation_split=0.2)
+					score = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout	
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 10, 0.1
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+			model.add(Embedding(length_word_index, 128))
+			model.add(LSTM(256, return_sequences=True))
+			model.add(Dropout(dropout))
+			model.add(TimeDistributed(Dense(length_tag_index)))
+			model.add(Activation('softmax'))
+			 
+			model.compile(loss='categorical_crossentropy',
+			              optimizer=Adam(0.001),
+			              metrics=['accuracy'])
+			              # metrics=['accuracy', ignore_class_accuracy(0)])
+
+			model.summary()
+
+			# One hot encode the tags
+			def onehot_encode_tags(sequences, categories):
+			    cat_sequences = []
+			    for seq in sequences:
+			        cats = []
+			        for item in seq:
+			            cats.append(np.zeros(categories))
+			            cats[-1][item] = 1.0
+			        cat_sequences.append(cats)
+			    return np.array(cat_sequences)
+
+			cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+			# print(cat_train_tags_y[0])
+
+			# Train the model
+			history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=epoch, validation_split=0.2)
+			
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			# display()
+
+		build_model()
+
 
 	def bi_LSTM(self, X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index):
 
-		model = Sequential()
-		model.add(InputLayer(input_shape=(MAX_LENGTH, )))
-		model.add(Embedding(length_word_index, 128))
-		# model.add(Conv1D(filters=MAX_LENGTH, kernel_size=4, padding='same', activation='relu'))
-		model.add(Bidirectional(LSTM(256, return_sequences=True)))
-		model.add(TimeDistributed(Dense(length_tag_index)))
-		model.add(Activation('softmax'))
-		 
-		model.compile(loss='categorical_crossentropy',
-		              optimizer=Adam(0.001),
-		              metrics=['accuracy'])
-		              # metrics=['accuracy', ignore_class_accuracy(0)])
+		def best_model():
 
-		model.summary()
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
 
-		# One hot encode the tags
-		def onehot_encode_tags(sequences, categories):
-		    cat_sequences = []
-		    for seq in sequences:
-		        cats = []
-		        for item in seq:
-		            cats.append(np.zeros(categories))
-		            cats[-1][item] = 1.0
-		        cat_sequences.append(cats)
-		    return np.array(cat_sequences)
+			for i in dropout_rate:
 
-		cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
-		print(cat_train_tags_y[0])
+				model = Sequential()
+				model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+				model.add(Embedding(length_word_index, 128))
+				model.add(Bidirectional(LSTM(256, return_sequences=True)))
+				model.add(Dropout(i))
+				model.add(TimeDistributed(Dense(length_tag_index)))
+				model.add(Activation('softmax'))
+				 
+				model.compile(loss='categorical_crossentropy',
+				              optimizer=Adam(0.001),
+				              metrics=['accuracy'])
+				              # metrics=['accuracy', ignore_class_accuracy(0)])
 
-		# Train the model
-		history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=1, validation_split=0.2)
-		
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
-		print('Accuracy: %f' % (accuracy * 100))
-		
-		# ## Manual test ##
-		# test_samples = ["running is very important for me .".split(),
- 		#   					"I was running every day for a month .".split()]
-		
-		# print(test_samples)
-		# test_samples_X = []
-		# for s in test_samples:
-  		#   		s_int = []
-  		#   		for w in s:
-		#         try:
-		#             s_int.append(word2index[w.lower()])
-		#         except KeyError:
-		#             s_int.append(word2index['-OOV-'])
-		#     test_samples_X.append(s_int)
-		 
-		# test_samples_X = pad_sequences(test_samples_X, maxlen=MAX_LENGTH, padding='post')
-		# print(test_samples_X)
+				# model.summary()
+				list_of_dropout.append(i)
+
+				# One hot encode the tags
+				def onehot_encode_tags(sequences, categories):
+				    cat_sequences = []
+				    for seq in sequences:
+				        cats = []
+				        for item in seq:
+				            cats.append(np.zeros(categories))
+				            cats[-1][item] = 1.0
+				        cat_sequences.append(cats)
+				    return np.array(cat_sequences)
+
+				cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+				# print(cat_train_tags_y[0])
+
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=e, validation_split=0.2)
+					score = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 10, 0.1
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+			model = Sequential()
+			model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+			model.add(Embedding(length_word_index, 128))
+			model.add(Bidirectional(LSTM(256, return_sequences=True)))
+			model.add(Dropout(dropout))
+			model.add(TimeDistributed(Dense(length_tag_index)))
+			model.add(Activation('softmax'))
+			 
+			model.compile(loss='categorical_crossentropy',
+			              optimizer=Adam(0.001),
+			              metrics=['accuracy'])
+			              # metrics=['accuracy', ignore_class_accuracy(0)])
+
+			model.summary()
+
+			# One hot encode the tags
+			def onehot_encode_tags(sequences, categories):
+			    cat_sequences = []
+			    for seq in sequences:
+			        cats = []
+			        for item in seq:
+			            cats.append(np.zeros(categories))
+			            cats[-1][item] = 1.0
+			        cat_sequences.append(cats)
+			    return np.array(cat_sequences)
+
+			cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+			print(cat_train_tags_y[0])
+
+
+			# Train the model
+			history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=epoch, validation_split=0.2)
+			
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			# display()
+
+		build_model()
+			
+			
 
 	def GRU(self, X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index):
 
-		model = Sequential()
-		model.add(InputLayer(input_shape=(MAX_LENGTH, )))
-		model.add(Embedding(length_word_index, 128))
-		model.add(GRU(50, return_sequences=True)) #50 #256
-		# model.add(GRU(length_tag_index, return_sequences=False))
-		model.add(Dense(length_tag_index, activation='sigmoid'))
-		# model.add(Activation('softmax'))
-		 
-		model.compile(loss='categorical_crossentropy',
-		              optimizer=Adam(0.001),
-		              metrics=['accuracy'])
-		              # metrics=['accuracy', ignore_class_accuracy(0)])
+		def best_model():
 
-		model.summary()
+			epochs = [5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3]
+			list_of_all_scores = list()
+			list_of_scores = list()
+			list_of_dropout = list()
+			list_of_all_dropouts = list()
+			list_of_epochs = list()
+
+			for i in dropout_rate:
 		
+				model = Sequential()
+				model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+				model.add(Embedding(length_word_index, 128))
+				model.add(GRU(256, return_sequences=True)) #50 #256
+				model.add(Dropout(i))
+				# model.add(GRU(length_tag_index, return_sequences=False))
+				model.add(Dense(length_tag_index, activation='sigmoid'))
+				# model.add(Activation('softmax'))
+				 
+				model.compile(loss='categorical_crossentropy',
+				              optimizer=Adam(0.001),
+				              metrics=['accuracy'])
+				              # metrics=['accuracy', ignore_class_accuracy(0)])
 
-		# One hot encode the tags
-		def onehot_encode_tags(sequences, categories):
-		    cat_sequences = []
-		    for seq in sequences:
-		        cats = []
-		        for item in seq:
-		            cats.append(np.zeros(categories))
-		            cats[-1][item] = 1.0
-		        cat_sequences.append(cats)
-		    return np.array(cat_sequences)
+				# model.summary()
+				list_of_dropout.append(i)
 
-		cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
-		print(cat_train_tags_y[0])
+				# One hot encode the tags
+				def onehot_encode_tags(sequences, categories):
+				    cat_sequences = []
+				    for seq in sequences:
+				        cats = []
+				        for item in seq:
+				            cats.append(np.zeros(categories))
+				            cats[-1][item] = 1.0
+				        cat_sequences.append(cats)
+				    return np.array(cat_sequences)
 
-		# Train the model
-		history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=1, validation_split=0.2)
+				cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+				
+				for e in epochs:
+					list_of_all_dropouts.append(i)
+					list_of_epochs.append(e)
+
+					model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=128, epochs=e, validation_split=0.2)
+					score = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+					list_of_all_scores.append(score)
+					
+					if score not in list_of_scores:
+						list_of_scores.append(score)
+		            		
+            #print('Dropout:', i, '\n', 'Epoch:', e, '\n', 'Score:', float(score))
+			lowest = min(list_of_all_scores)
+			num = list_of_scores.index(lowest)
+			epoch = list_of_epochs[num]
+			dropout = list_of_all_dropouts[num]
+			print('Lowest score:', lowest, 'Epoch:', epoch, 'Dropout',  dropout)
+
+			return epoch, dropout
+
+		def build_model():
+
+			epoch, dropout = best_model()
+			# epoch, dropout = 10, 0.1
+			print('EPOCH = ', epoch)
+			print('DROPOUT = ', dropout)
+
+
+			model = Sequential()
+			model.add(InputLayer(input_shape=(MAX_LENGTH, )))
+			model.add(Embedding(length_word_index, 128))
+			model.add(GRU(256, return_sequences=True)) #50 #256
+			# model.add(GRU(length_tag_index, return_sequences=False))
+			model.add(Dropout(dropout))
+			model.add(Dense(length_tag_index, activation='sigmoid'))
+			# model.add(Activation('softmax'))
+			 
+			model.compile(loss='categorical_crossentropy',
+			              optimizer=Adam(0.001),
+			              metrics=['accuracy'])
+			              # metrics=['accuracy', ignore_class_accuracy(0)])
+
+			model.summary()
 		
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
-		print('Accuracy: %f' % (accuracy * 100))
+			# One hot encode the tags
+			def onehot_encode_tags(sequences, categories):
+			    cat_sequences = []
+			    for seq in sequences:
+			        cats = []
+			        for item in seq:
+			            cats.append(np.zeros(categories))
+			            cats[-1][item] = 1.0
+			        cat_sequences.append(cats)
+			    return np.array(cat_sequences)
+
+			cat_train_tags_y = onehot_encode_tags(y_train, length_tag_index)
+			print(cat_train_tags_y[0])
+
+			# Train the model
+			history = model.fit(X_train, onehot_encode_tags(y_train, length_tag_index), batch_size=228, epochs=epoch, validation_split=0.2)
+			
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, onehot_encode_tags(y_test, length_tag_index))
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			# display()
+
+		build_model()
 		
 		 
 
@@ -347,9 +697,9 @@ if __name__ == "__main__":
 	extractor = POS_Tagging()
 	(X_train, y_train, X_test, y_test, 
 	MAX_LENGTH,length_word_index, length_tag_index) = extractor.preprocessing(dataset)
-	extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 	extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 
 	
