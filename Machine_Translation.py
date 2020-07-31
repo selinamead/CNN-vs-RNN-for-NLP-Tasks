@@ -238,8 +238,8 @@ class Machine_Translation:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 20, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -332,8 +332,8 @@ class Machine_Translation:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 15, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -424,8 +424,8 @@ class Machine_Translation:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 20, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -494,7 +494,7 @@ class Machine_Translation:
 				# model.add(Activation('softmax'))
 				model.compile(loss='sparse_categorical_crossentropy',
 				              optimizer=RMSprop(lr=0.01),
-				              metrics=['accuracy'])
+				              metrics=['acc'])
 				             
 				for e in epochs:
 					list_of_all_dropouts.append(i)
@@ -518,8 +518,8 @@ class Machine_Translation:
 		
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 10, 0.3 # Best params
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -532,22 +532,44 @@ class Machine_Translation:
 			# model.add(Activation('softmax'))
 			model.compile(loss='sparse_categorical_crossentropy',
 			              optimizer=RMSprop(lr=0.01),
-			              metrics=['accuracy'])
+			              metrics=['acc'])
 			model.summary()
 
-		# print(model.summary())	
+			# print(model.summary())	
 
-		# # Train the model
-		# history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
-		# # Evaluate the model
-		# loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-		# print('Accuracy: %f' % (accuracy * 100))
+			# # Train the model
+			# history = model.fit(X_train, y_train, epochs=5, batch_size=128, verbose=1, validation_split=0.2)
+			# # Evaluate the model
+			# loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			# print('Accuracy: %f' % (accuracy * 100))
 
-		# Train model
-		history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
-		# Evaluate the model
-		loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
-		print('Accuracy: %f' % (accuracy * 100))
+			# Train model
+			history = model.fit(X_train, y_train.reshape(y_train.shape[0], y_train.shape[1], 1), epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# Evaluate the model
+			loss, accuracy = model.evaluate(X_test, y_test.reshape(y_test.shape[0], y_test.shape[1], 1), verbose=1)
+			print('Accuracy: %f' % (accuracy * 100))
+
+			def display():
+				plt.plot(history.history['acc'])
+				plt.plot(history.history['val_acc'])
+
+				plt.title('model accuracy')
+				plt.ylabel('accuracy')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+
+				plt.plot(history.history['loss'])
+				plt.plot(history.history['val_loss'])
+
+				plt.title('model loss')
+				plt.ylabel('loss')
+				plt.xlabel('epoch')
+				plt.legend(['train','test'], loc = 'upper left')
+				plt.show()
+			display()
+
+		build_model()
 
 
 
@@ -559,9 +581,9 @@ if __name__ == "__main__":
     # extractor.pre_process(data)
     X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len = extractor.pre_process(data)
     # extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    # extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
     # extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    # extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
 
 
 
