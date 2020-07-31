@@ -132,6 +132,7 @@ class Sentiment_Analysis:
 		def best_model():
 			epochs = [5, 10, 15, 20]
 			dropout_rate = [0.1, 0.2, 0.3]
+			# learning_rates = [0.01, 0.05, 0.1]
 			list_of_all_scores = list()
 			list_of_scores = list()
 			list_of_dropout = list()
@@ -264,8 +265,8 @@ class Sentiment_Analysis:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 5, 0.1
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -330,7 +331,7 @@ class Sentiment_Analysis:
 				model.add(Bidirectional(LSTM(20, dropout=dropout)))
 				model.add(Dense(1, activation="sigmoid"))
 				
-				model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+				model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
 
 				list_of_dropout.append(i)
 					
@@ -356,8 +357,8 @@ class Sentiment_Analysis:
 		
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 5, 0.1
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -367,7 +368,7 @@ class Sentiment_Analysis:
 			model.add(Bidirectional(LSTM(20, dropout=dropout)))
 			model.add(Dense(1, activation="sigmoid"))
 			
-			model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+			model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
 
 			print(model.summary())	
 
@@ -425,7 +426,7 @@ class Sentiment_Analysis:
 				model.add(GRU(1, return_sequences=False))
 				model.add(Dropout(i))
 				model.add(Dense(1, activation='sigmoid'))
-				model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+				model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
     
 				list_of_dropout.append(i)
 					
@@ -451,8 +452,8 @@ class Sentiment_Analysis:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 5, 0.3
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -462,7 +463,7 @@ class Sentiment_Analysis:
 			model.add(GRU(1, return_sequences=False))
 			model.add(Dropout(dropout))
 			model.add(Dense(1, activation='sigmoid'))
-			model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+			model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
     
 			print(model.summary())	
 
@@ -500,8 +501,8 @@ if __name__ == "__main__":
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
     # extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
-    extractor.LSTM(X_train, y_train, X_test, y_test, vocab_size)
+    # extractor.LSTM(X_train, y_train, X_test, y_test, vocab_size)
     # extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
-    # extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
 
 
