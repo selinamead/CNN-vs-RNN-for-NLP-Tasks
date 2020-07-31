@@ -92,7 +92,7 @@ class POS_Tagging:
 		indexed_words['-OOV-'] = 1
 
 		length_word_index = len(indexed_words)
-		print(length_word_index)
+		# print(length_word_index)
 		
 		# A dict for pos tags and their indicies
 		# indexed_tags = dict()
@@ -101,14 +101,14 @@ class POS_Tagging:
 		# indexed_tags['-OOV-'] = 1
 
 		length_tag_index = len(indexed_tags)
-		print(length_tag_index)
+		# print(length_tag_index)
 
 		# For display only
 		N = 10
 		output = dict(list(indexed_words.items())[0: N]) 
-		print(output)
+		# print(output)
 		output = dict(list(indexed_tags.items())[0: N]) 
-		print(output)
+		# print(output)
 
 		X_train_sent, X_test_sent, y_train_tags, y_test_tags = [], [], [], []
  		
@@ -121,7 +121,7 @@ class POS_Tagging:
 		            sent_ints.append(indexed_words['-OOV-'])
 		 
 		    X_train_sent.append(sent_ints)
-		print(X_train_sent[0])
+		# print(X_train_sent[0])
 		 
 		for sent in X_test:
 		    sent_ints = []
@@ -132,7 +132,7 @@ class POS_Tagging:
 		            sent_ints.append(indexed_words['-OOV-'])
 		 
 		    X_test_sent.append(sent_ints)
-		print(X_test_sent[0])
+		# print(X_test_sent[0])
 
 		for s in y_train:
 			y_train_tags.append([indexed_tags[t] for t in s])
@@ -144,17 +144,17 @@ class POS_Tagging:
 		## Pad sequences ##
 		# Find max length of sent
 		MAX_LENGTH = len(max(X_train_sent, key=len))
-		print(MAX_LENGTH) 
+		# print(MAX_LENGTH) 
 
 		X_train_sent = pad_sequences(X_train_sent, maxlen=MAX_LENGTH, padding='post')
 		X_test_sent = pad_sequences(X_test_sent, maxlen=MAX_LENGTH, padding='post')
 		y_train_tags = pad_sequences(y_train_tags, maxlen=MAX_LENGTH, padding='post')
 		y_test_tags = pad_sequences(y_test_tags, maxlen=MAX_LENGTH, padding='post')
 		 
-		print(X_train_sent[0])
-		print(X_test_sent[0])
-		print(y_train_tags[0])
-		print(y_test_tags[0])
+		# print(X_train_sent[0])
+		# print(X_test_sent[0])
+		# print(y_train_tags[0])
+		# print(y_test_tags[0])
 
 		return (X_train_sent, y_train_tags, X_test_sent, y_test_tags, 
 				MAX_LENGTH, length_word_index, length_tag_index)
@@ -188,7 +188,7 @@ class POS_Tagging:
 				model.add(Dropout(i))
 				model.add(Dense(length_tag_index))
 				model.add(Activation('softmax'))
-				model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+				model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
 				# print(model.summary())
 				list_of_dropout.append(i)
 
@@ -228,8 +228,8 @@ class POS_Tagging:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 5, 0.2
+			# epoch, dropout = best_model()
+			epoch, dropout = 15, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -243,7 +243,7 @@ class POS_Tagging:
 			model.add(Dropout(dropout))
 			model.add(Dense(length_tag_index))
 			model.add(Activation('softmax'))
-			model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+			model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
 			# print(model.summary())
 
 			# One hot encode the tags
@@ -293,7 +293,7 @@ class POS_Tagging:
 				plt.xlabel('epoch')
 				plt.legend(['train','test'], loc = 'upper left')
 				plt.show()
-			# display()
+			display()
 
 		build_model()
 
@@ -321,7 +321,7 @@ class POS_Tagging:
 				 
 				model.compile(loss='categorical_crossentropy',
 				              optimizer=Adam(0.001),
-				              metrics=['accuracy'])
+				              metrics=['acc'])
 				              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 				# model.summary()
@@ -362,8 +362,8 @@ class POS_Tagging:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 10, 0.1
+			# epoch, dropout = best_model()
+			epoch, dropout = 20, 0.3
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -377,7 +377,7 @@ class POS_Tagging:
 			 
 			model.compile(loss='categorical_crossentropy',
 			              optimizer=Adam(0.001),
-			              metrics=['accuracy'])
+			              metrics=['acc'])
 			              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 			model.summary()
@@ -421,7 +421,7 @@ class POS_Tagging:
 				plt.xlabel('epoch')
 				plt.legend(['train','test'], loc = 'upper left')
 				plt.show()
-			# display()
+			display()
 
 		build_model()
 
@@ -492,8 +492,8 @@ class POS_Tagging:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 10, 0.1
+			# epoch, dropout = best_model()
+			epoch, dropout = 20, 0.3
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -552,7 +552,7 @@ class POS_Tagging:
 				plt.xlabel('epoch')
 				plt.legend(['train','test'], loc = 'upper left')
 				plt.show()
-			# display()
+			display()
 
 		build_model()
 			
@@ -583,7 +583,7 @@ class POS_Tagging:
 				 
 				model.compile(loss='categorical_crossentropy',
 				              optimizer=Adam(0.001),
-				              metrics=['accuracy'])
+				              metrics=['acc'])
 				              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 				# model.summary()
@@ -624,8 +624,8 @@ class POS_Tagging:
 
 		def build_model():
 
-			epoch, dropout = best_model()
-			# epoch, dropout = 10, 0.1
+			# epoch, dropout = best_model()
+			epoch, dropout = 20, 0.3
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -641,7 +641,7 @@ class POS_Tagging:
 			 
 			model.compile(loss='categorical_crossentropy',
 			              optimizer=Adam(0.001),
-			              metrics=['accuracy'])
+			              metrics=['acc'])
 			              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 			model.summary()
@@ -685,7 +685,7 @@ class POS_Tagging:
 				plt.xlabel('epoch')
 				plt.legend(['train','test'], loc = 'upper left')
 				plt.show()
-			# display()
+			display()
 
 		build_model()
 		
