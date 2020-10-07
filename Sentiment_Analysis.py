@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 # IMport RNN Libraries
 from tensorflow.python.keras.layers import LSTM, Bidirectional, GRU
 from keras import regularizers
+from sklearn.model_selection import KFold
 
 
 
@@ -31,7 +32,8 @@ class Sentiment_Analysis:
 	
 	def __init__(self, file_path):
 		self.file_path = file_path 
-		print('Retrieving IMBD Dataset')
+		print('\n==========================================================================\n')
+		print('=== Retrieving IMBD Dataset ===')
 		self.dataset = pd.read_csv(file_path)
 		print('No of samples = ', len(self.dataset))
 		self.small_dataset = self.dataset[:500]
@@ -43,7 +45,7 @@ class Sentiment_Analysis:
 	'''
 	def pre_process(self, file):
 		dataset = self.dataset
-		print('Pre Processing Data')
+		# print('\n=== Pre Processing Data ===')
 		# Check for null values and drop if any
 		if dataset.isnull().values.any():
 			print('removing null values')
@@ -59,6 +61,7 @@ class Sentiment_Analysis:
 			print('Size of Dataset: ', movie_reviews.shape[0])
 
 		# print(movie_reviews.review[7])
+		print('Pre-processing Data......')
 	
 		# Clean textual data from 'Review'
 		stemmer = SnowballStemmer('english') 
@@ -114,6 +117,9 @@ class Sentiment_Analysis:
 		vocab_size = len(tokenizer.word_index) + 1  # need to add 1 because of 0 indexing
 		print('Number of Unique Words in Corpus: ', vocab_size)
 
+		MAX_LENGTH = len(max(X_train, key=len))
+		print(MAX_LENGTH)
+		
 		# Padding
 		max_len = 100 # Test on 100
 		X_train = pad_sequences(X_train, padding='post', maxlen=max_len)
@@ -130,8 +136,8 @@ class Sentiment_Analysis:
 		embedding_dim = 10
 
 		def best_model():
-			epochs = [5, 10, 15, 20]
-			dropout_rate = [0.1, 0.2, 0.3]
+			epochs = [2, 5, 10, 15, 20]
+			dropout_rate = [0.1, 0.2, 0.3, 0.4]
 			# learning_rates = [0.01, 0.05, 0.1]
 			list_of_all_scores = list()
 			list_of_scores = list()
@@ -142,7 +148,7 @@ class Sentiment_Analysis:
 			for i in dropout_rate:
 				model = Sequential()
 				model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
-				model.add(Conv1D(filters=128, kernel_size=5, padding='same', activation='relu'))
+				model.add(Conv1D(filters=max_length, kernel_size=5, padding='same', activation='relu'))
 				model.add(GlobalMaxPooling1D())
 				model.add(Dropout(i))
 				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
@@ -173,26 +179,79 @@ class Sentiment_Analysis:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 5, 0.2
+			epoch, dropout = 2, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
-	
-			# Build CNN model
-			model = Sequential()
-			model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
-			model.add(Conv1D(filters=128, kernel_size=5, padding='same', activation='relu'))
-			model.add(GlobalMaxPooling1D())
-			model.add(Dropout(dropout))
-			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
-			model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
-			print(model.summary())	
 
+			# K-Fold Cross Validation
+			cross_validate = False
+			if cross_validate:
+				k_folds = 10
+			else:
+				k_folds = 2
+
+			# Define the K-fold Cross Validator
+			kfold = KFold(n_splits=k_folds, shuffle=True)
+			
+			# Define per-fold score containers 
+			acc_per_fold = []
+			loss_per_fold = []
+			# Merge inputs and targets
+			inputs = np.concatenate((X_train, X_test), axis=0)
+			targets = np.concatenate((y_train, y_test), axis=0)
+
+			# K-fold Cross Validation model evaluation
+			fold_no = 1
+			for train, test in kfold.split(inputs, targets):
+				# Build CNN model
+				model = Sequential()
+				model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
+				model.add(Conv1D(filters=max_length, kernel_size=5, padding='same', activation='relu'))
+				model.add(GlobalMaxPooling1D())
+				model.add(Dropout(dropout))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
+				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+				# print(model.summary())	
+
+				# Generate a print
+				print('------------------------------------------------------------------------')
+				print(f'Training for fold {fold_no} ...')
+
+				# Train Model
+				history = model.fit(inputs[train], targets[train], batch_size=128, epochs=epoch, verbose=1, validation_split=0.1)
+
+				# Evaluate Model
+				scores = model.evaluate(inputs[test], targets[test], verbose=0)
+				test_acc, test_loss = scores[1], scores[0]
+				print(f'Score for fold {fold_no}: {model.metrics_names[0]} of {test_loss}; {model.metrics_names[1]} of {test_acc*100}%')
+				acc_per_fold.append(test_acc * 100)
+				loss_per_fold.append(test_loss)
+
+
+				# Increase fold number
+				fold_no += 1
+
+			# == Get average scores == #
+			print('------------------------------------------------------------------------')
+			print('Score per fold')
+			
+			for i in range(0, len(acc_per_fold)):
+				print('------------------------------------------------------------------------')
+				print(f'> Fold {i+1} - Loss: {loss_per_fold[i]} - Accuracy: {acc_per_fold[i]}%')
+				print('------------------------------------------------------------------------')
+				print('Average scores for all folds:')
+				print(f'> Accuracy: {np.mean(acc_per_fold)} (+- {np.std(acc_per_fold)})')
+				print(f'> Loss: {np.mean(loss_per_fold)}')
+				print('------------------------------------------------------------------------')
+
+
+			'''
 			# Train model
 			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
 			# Evaluate model
 			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
 			print('Accuracy: %f' % (accuracy*100))
-
+			'''
 
 			def display():
 				plt.plot(history.history['acc'])
@@ -213,6 +272,7 @@ class Sentiment_Analysis:
 				plt.legend(['train','test'], loc = 'upper left')
 				plt.show()
 			display()
+			
 
 		build_model()
 	
@@ -238,7 +298,7 @@ class Sentiment_Analysis:
 				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
 				model.add(LSTM(128))
 				model.add(Dropout(i))
-				model.add(Dense(1, activation='sigmoid'))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
 				list_of_dropout.append(i)
@@ -274,7 +334,7 @@ class Sentiment_Analysis:
 			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
 			model.add(LSTM(128))
 			model.add(Dropout(dropout))
-			model.add(Dense(1, activation='sigmoid'))
+			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 			model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 
 			print(model.summary())	
@@ -327,9 +387,9 @@ class Sentiment_Analysis:
 			for i in dropout_rate:
 				model = Sequential()
 				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+				model.add(Bidirectional(LSTM(20)))#, dropout=dropout)))
 				model.add(Dropout(dropout))
-				model.add(Bidirectional(LSTM(20, dropout=dropout)))
-				model.add(Dense(1, activation="sigmoid"))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation="sigmoid"))
 				
 				model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
 
@@ -364,9 +424,9 @@ class Sentiment_Analysis:
 
 			model = Sequential()
 			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+			model.add(Bidirectional(LSTM(20)))#, dropout=dropout)))
 			model.add(Dropout(dropout))
-			model.add(Bidirectional(LSTM(20, dropout=dropout)))
-			model.add(Dense(1, activation="sigmoid"))
+			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation="sigmoid"))
 			
 			model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
 
@@ -425,7 +485,7 @@ class Sentiment_Analysis:
 				model.add(GRU(50, return_sequences=True))
 				model.add(GRU(1, return_sequences=False))
 				model.add(Dropout(i))
-				model.add(Dense(1, activation='sigmoid'))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 				model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
     
 				list_of_dropout.append(i)
@@ -462,7 +522,7 @@ class Sentiment_Analysis:
 			model.add(GRU(50, return_sequences=True))
 			model.add(GRU(1, return_sequences=False))
 			model.add(Dropout(dropout))
-			model.add(Dense(1, activation='sigmoid'))
+			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 			model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
     
 			print(model.summary())	
@@ -500,9 +560,9 @@ if __name__ == "__main__":
     file = '/Users/selina/Code/Python/SSL/CNN_vs_RNN/IMDB_Dataset.csv'
     extractor = Sentiment_Analysis(file)
     X_train, y_train, X_test, y_test, vocab_size = extractor.pre_process(file)
-    # extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
+    extractor.CNN(X_train, y_train, X_test, y_test, vocab_size)
     # extractor.LSTM(X_train, y_train, X_test, y_test, vocab_size)
     # extractor.bi_LSTM(X_train, y_train, X_test, y_test, vocab_size)
-    extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
+    # extractor.GRU(X_train, y_train, X_test, y_test, vocab_size)
 
 
