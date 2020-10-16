@@ -239,7 +239,7 @@ class Machine_Translation:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 20, 0.2
+			epoch, dropout = 5, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -333,7 +333,7 @@ class Machine_Translation:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 15, 0.2
+			epoch, dropout = 5, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -425,7 +425,7 @@ class Machine_Translation:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 20, 0.2
+			epoch, dropout = 5, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -519,7 +519,7 @@ class Machine_Translation:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 10, 0.3 # Best params
+			epoch, dropout = 5, 0.3 # Best params
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -581,8 +581,8 @@ if __name__ == "__main__":
     # extractor.pre_process(data)
     X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len = extractor.pre_process(data)
     # extractor.CNN(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    # extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
-    # extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
+    extractor.bi_LSTM(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
     extractor.GRU(X_train, y_train, X_test, y_test, eng_vocab_size, ger_vocab_size, max_len)
 
 
