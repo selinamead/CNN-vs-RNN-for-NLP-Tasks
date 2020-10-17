@@ -1,5 +1,8 @@
-
-''' Machine Translation of German to English, English to German using CNN and RNN architectures '''
+''' 
+Machine Translation of German to English, English to German using CNN and RNN architectures 
+Author - Selina Mead Miller
+October 2020
+'''
 
 # import csv
 import string
@@ -7,9 +10,6 @@ import re
 import numpy as np
 import pandas as pd 
 from numpy import array, argmax, random, take
-
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Embedding, RepeatVector
 from keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.text import text_to_word_sequence
@@ -21,11 +21,6 @@ from keras import optimizers
 from nltk.tokenize import RegexpTokenizer
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from keras.preprocessing.text import text_to_word_sequence
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
 # Import CNN Libraries
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Reshape, TimeDistributed
@@ -35,13 +30,14 @@ import matplotlib.pyplot as plt
 from tensorflow.python.keras.layers import LSTM, Bidirectional, GRU
 from tensorflow.python.keras.optimizers import Adam, RMSprop
 
-import matplotlib.pyplot as plt
 
 class Machine_Translation:
 
 	def __init__(self, file_path):
 		self.file_path = file_path
 		self.size = 5000 # How many samples to use
+		print('\n==========================================================================\n')
+		print('\n **** Machine Translation Task ****\n')
 
 	def get_dataset(self):
 
@@ -57,13 +53,15 @@ class Machine_Translation:
 
 		dataset = data
 		# print(dataset[:10])
-		# Smile.	Lächeln!	CC-BY 2.0 (France) Attribution: tatoeba.org #2764108 (CK) & #4659632 (AC)
+		''' Smile.	Lächeln!	CC-BY 2.0 (France) Attribution: tatoeba.org #2764108 (CK) & #4659632 (AC)'''
 		# Need to split on \t and \n
 		sentences = dataset.split('\n')
 		sentences = [i.split('\t') for i in sentences]
 		sentences = array(sentences)
+		
 		# for i in range(50): print(sentences[i])
-		# ['Fire!' 'Feuer!''CC-BY 2.0 (France) Attribution: tatoeba.org #1829639 (Spamster) & #1958697 (Tamy)']
+		''' ['Fire!' 'Feuer!''CC-BY 2.0 (France) Attribution: tatoeba.org #1829639 (Spamster) & #1958697 (Tamy)'] '''
+		
 		eng_sent = []
 		ger_sent = []
 		for sent in range(self.size):
@@ -75,8 +73,8 @@ class Machine_Translation:
 			eng_sent.append(eng)
 			ger_sent.append(ger)
 
-		print(eng_sent[100]) # Can I help?
-		print(ger_sent[100]) # Kann ich mich nützlich machen?
+		# print(eng_sent[100]) # Can I help?
+		# print(ger_sent[100]) # Kann ich mich nützlich machen?
 
 		eng_sent = array(eng_sent) 
 		# for i in range(10): print(eng_sent[i])
