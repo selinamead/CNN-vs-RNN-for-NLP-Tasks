@@ -114,7 +114,7 @@ class Sentiment_Analysis:
 		X_test = tokenizer.texts_to_sequences(X_test)
 
 		# Number of unique words
-		vocab_size = len(tokenizer.word_index) + 1  # need to add 1 because of 0 indexing
+		vocab_size = len(tokenizer.word_index) + 1  
 		print('Number of Unique Words in Corpus: ', vocab_size)
 
 		MAX_LENGTH = len(max(X_train, key=len))
@@ -133,7 +133,7 @@ class Sentiment_Analysis:
 
 		# Max length of review for embedding
 		max_length = 100 
-		embedding_dim = 10
+		embedding_dim = 100
 
 		def best_model():
 			epochs = [2, 5, 10, 15, 20]
@@ -187,22 +187,62 @@ class Sentiment_Analysis:
 			cross_validate = False
 			if cross_validate:
 				k_folds = 10
+				# Define the K-fold Cross Validator
+				kfold = KFold(n_splits=k_folds, shuffle=True)
+				
+				# Define per-fold score containers 
+				acc_per_fold = []
+				loss_per_fold = []
+				# Merge inputs and targets
+				inputs = np.concatenate((X_train, X_test), axis=0)
+				targets = np.concatenate((y_train, y_test), axis=0)
+
+				# K-fold Cross Validation model evaluation
+				fold_no = 1
+				for train, test in kfold.split(inputs, targets):
+					# Build CNN model
+					model = Sequential()
+					model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
+					model.add(Conv1D(filters=max_length, kernel_size=5, padding='same', activation='relu'))
+					model.add(GlobalMaxPooling1D())
+					model.add(Dropout(dropout))
+					model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
+					model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+					# print(model.summary())	
+
+					# Generate a print
+					print('------------------------------------------------------------------------')
+					print(f'Training for fold {fold_no} ...')
+
+					# Train Model
+					history = model.fit(inputs[train], targets[train], batch_size=128, epochs=epoch, verbose=1, validation_split=0.1)
+
+					# Evaluate Model
+					scores = model.evaluate(inputs[test], targets[test], verbose=0)
+					test_acc, test_loss = scores[1], scores[0]
+					print(f'Score for fold {fold_no}: {model.metrics_names[0]} of {test_loss}; {model.metrics_names[1]} of {test_acc*100}%')
+					acc_per_fold.append(test_acc * 100)
+					loss_per_fold.append(test_loss)
+
+
+					# Increase fold number
+					fold_no += 1
+
+				# == Get average scores == #
+				print('------------------------------------------------------------------------')
+				print('Score per fold')
+				
+				for i in range(0, len(acc_per_fold)):
+					print('------------------------------------------------------------------------')
+					print(f'> Fold {i+1} - Loss: {loss_per_fold[i]} - Accuracy: {acc_per_fold[i]}%')
+					print('------------------------------------------------------------------------')
+					print('Average scores for all folds:')
+					print(f'> Accuracy: {np.mean(acc_per_fold)} (+- {np.std(acc_per_fold)})')
+					print(f'> Loss: {np.mean(loss_per_fold)}')
+					print('------------------------------------------------------------------------')
+
 			else:
-				k_folds = 2
 
-			# Define the K-fold Cross Validator
-			kfold = KFold(n_splits=k_folds, shuffle=True)
-			
-			# Define per-fold score containers 
-			acc_per_fold = []
-			loss_per_fold = []
-			# Merge inputs and targets
-			inputs = np.concatenate((X_train, X_test), axis=0)
-			targets = np.concatenate((y_train, y_test), axis=0)
-
-			# K-fold Cross Validation model evaluation
-			fold_no = 1
-			for train, test in kfold.split(inputs, targets):
 				# Build CNN model
 				model = Sequential()
 				model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=max_length))
@@ -211,47 +251,14 @@ class Sentiment_Analysis:
 				model.add(Dropout(dropout))
 				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
-				# print(model.summary())	
-
-				# Generate a print
-				print('------------------------------------------------------------------------')
-				print(f'Training for fold {fold_no} ...')
-
-				# Train Model
-				history = model.fit(inputs[train], targets[train], batch_size=128, epochs=epoch, verbose=1, validation_split=0.1)
-
-				# Evaluate Model
-				scores = model.evaluate(inputs[test], targets[test], verbose=0)
-				test_acc, test_loss = scores[1], scores[0]
-				print(f'Score for fold {fold_no}: {model.metrics_names[0]} of {test_loss}; {model.metrics_names[1]} of {test_acc*100}%')
-				acc_per_fold.append(test_acc * 100)
-				loss_per_fold.append(test_loss)
-
-
-				# Increase fold number
-				fold_no += 1
-
-			# == Get average scores == #
-			print('------------------------------------------------------------------------')
-			print('Score per fold')
+				print(model.summary())	
 			
-			for i in range(0, len(acc_per_fold)):
-				print('------------------------------------------------------------------------')
-				print(f'> Fold {i+1} - Loss: {loss_per_fold[i]} - Accuracy: {acc_per_fold[i]}%')
-				print('------------------------------------------------------------------------')
-				print('Average scores for all folds:')
-				print(f'> Accuracy: {np.mean(acc_per_fold)} (+- {np.std(acc_per_fold)})')
-				print(f'> Loss: {np.mean(loss_per_fold)}')
-				print('------------------------------------------------------------------------')
-
-
-			'''
-			# Train model
-			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
-			# Evaluate model
-			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-			print('Accuracy: %f' % (accuracy*100))
-			'''
+				# Train model
+				history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+				# Evaluate model
+				loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+				print('Accuracy: %f' % (accuracy*100))
+				
 
 			def display():
 				plt.plot(history.history['acc'])
@@ -281,7 +288,7 @@ class Sentiment_Analysis:
 		
 		# Max length of review for embedding
 		max_length = 100 
-		embedding_dim = 10
+		embedding_dim = 100
 
 		def best_model():
 
@@ -300,6 +307,7 @@ class Sentiment_Analysis:
 				model.add(Dropout(i))
 				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
 				model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+
 
 				list_of_dropout.append(i)
 
@@ -513,25 +521,79 @@ class Sentiment_Analysis:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 5, 0.3
+			epoch, dropout = 20, 0.3
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
-			model = Sequential()
-			model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
-			model.add(GRU(50, return_sequences=True))
-			model.add(GRU(1, return_sequences=False))
-			model.add(Dropout(dropout))
-			model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
-			model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
-    
-			print(model.summary())	
+			# K-Fold Cross Validation
+			cross_validate = False
+			if cross_validate:
+				k_folds = 10
+			else:
+				k_folds = 2
 
-			# Train the model
-			history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
-			# Evaluate the model
-			loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
-			print('Accuracy: %f' % (accuracy * 100))
+			# Define the K-fold Cross Validator
+			kfold = KFold(n_splits=k_folds, shuffle=True)
+			
+			# Define per-fold score containers 
+			acc_per_fold = []
+			loss_per_fold = []
+			# Merge inputs and targets
+			inputs = np.concatenate((X_train, X_test), axis=0)
+			targets = np.concatenate((y_train, y_test), axis=0)
+
+			# K-fold Cross Validation model evaluation
+			fold_no = 1
+			for train, test in kfold.split(inputs, targets):
+				model = Sequential()
+				model.add(Embedding(vocab_size, embedding_dim, input_length=max_length))
+				model.add(GRU(50, return_sequences=True))
+				model.add(GRU(1, return_sequences=False))
+				model.add(Dropout(dropout))
+				model.add(Dense(1, kernel_regularizer=regularizers.l2(0.01), activation='sigmoid'))
+				model.compile(loss = 'binary_crossentropy', optimizer = 'adam', metrics = ['acc'])
+	    
+				# print(model.summary())	
+
+				# Generate a print
+				print('------------------------------------------------------------------------')
+				print(f'Training for fold {fold_no} ...')
+
+				# Train Model
+				history = model.fit(inputs[train], targets[train], batch_size=128, epochs=epoch, verbose=1, validation_split=0.1)
+
+				# Evaluate Model
+				scores = model.evaluate(inputs[test], targets[test], verbose=0)
+				test_acc, test_loss = scores[1], scores[0]
+				print(f'Score for fold {fold_no}: {model.metrics_names[0]} of {test_loss}; {model.metrics_names[1]} of {test_acc*100}%')
+				acc_per_fold.append(test_acc * 100)
+				loss_per_fold.append(test_loss)
+
+
+				# Increase fold number
+				fold_no += 1
+
+			# == Get average scores == #
+			print('------------------------------------------------------------------------')
+			print('Score per fold')
+			
+			for i in range(0, len(acc_per_fold)):
+				print('------------------------------------------------------------------------')
+				print(f'> Fold {i+1} - Loss: {loss_per_fold[i]} - Accuracy: {acc_per_fold[i]}%')
+				print('------------------------------------------------------------------------')
+				print('Average scores for all folds:')
+				print(f'> Accuracy: {np.mean(acc_per_fold)} (+- {np.std(acc_per_fold)})')
+				print(f'> Loss: {np.mean(loss_per_fold)}')
+				print('------------------------------------------------------------------------')
+
+
+			
+
+			# # Train the model
+			# history = model.fit(X_train, y_train, epochs=epoch, batch_size=128, verbose=1, validation_split=0.2)
+			# # Evaluate the model
+			# loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
+			# print('Accuracy: %f' % (accuracy * 100))
 
 			def display():
 				plt.plot(history.history['acc'])
