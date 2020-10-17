@@ -229,7 +229,7 @@ class POS_Tagging:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 15, 0.2
+			epoch, dropout = 20, 0.2
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -493,7 +493,7 @@ class POS_Tagging:
 		def build_model():
 
 			# epoch, dropout = best_model()
-			epoch, dropout = 20, 0.3
+			epoch, dropout = 20, 0.1
 			print('EPOCH = ', epoch)
 			print('DROPOUT = ', dropout)
 
@@ -507,7 +507,7 @@ class POS_Tagging:
 			 
 			model.compile(loss='categorical_crossentropy',
 			              optimizer=Adam(0.001),
-			              metrics=['accuracy'])
+			              metrics=['acc'])
 			              # metrics=['accuracy', ignore_class_accuracy(0)])
 
 			model.summary()
@@ -699,8 +699,8 @@ if __name__ == "__main__":
 	MAX_LENGTH,length_word_index, length_tag_index) = extractor.preprocessing(dataset)
 	# extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 	# extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	# extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 
 	
 
