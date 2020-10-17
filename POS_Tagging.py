@@ -1,6 +1,7 @@
 '''
 Part of Speech tagging implemented using CNN and RNN architectures
-
+Author - Selina Mead Miller
+October 2020
 '''
 
 import nltk
@@ -23,6 +24,8 @@ class POS_Tagging:
 
 	def __init__(self):
 		data = nltk.corpus.treebank.tagged_sents()
+		print('\n==========================================================================\n')
+		print('\n **** POS Tagging Task ****\n')
 	
 	def preprocessing(self, data):
 		
@@ -698,9 +701,9 @@ if __name__ == "__main__":
 	(X_train, y_train, X_test, y_test, 
 	MAX_LENGTH,length_word_index, length_tag_index) = extractor.preprocessing(dataset)
 	# extractor.CNN(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 	extractor.bi_LSTM(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
-	# extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
+	extractor.GRU(X_train, y_train, X_test, y_test, MAX_LENGTH, length_word_index, length_tag_index)
 
 	
 
